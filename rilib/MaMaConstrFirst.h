@@ -44,7 +44,9 @@ public:
 	MaMaConstrFirst(Graph& query) : MatchingMachine(query){
 
 	}
-
+  
+  virtual ~MaMaConstrFirst(){}
+  
 	virtual void build(Graph& ssg){
 
 		enum NodeFlag {NS_CORE, NS_CNEIGH, NS_UNV};
