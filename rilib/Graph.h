@@ -30,6 +30,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #ifndef GRAPH_H_
 #define GRAPH_H_
 
+#include <stdlib.h>
+#include <string>
 
 namespace rilib{
 class Graph{
@@ -56,6 +58,25 @@ public:
 		in_adj_list = NULL;
 		out_adj_attrs = NULL;
 	}
+    
+    ~Graph() {
+        int i, j;
+        for (i=0; i<nof_nodes; ++i) {
+            for (j=0; j<out_adj_sizes[i]; ++j) delete (std::string*)out_adj_attrs[i][j];
+            free(out_adj_attrs[i]);
+        }
+        for (i=0; i<nof_nodes; ++i) delete (std::string*)nodes_attrs[i];
+        free(nodes_attrs);
+
+        free(out_adj_sizes);
+        free(in_adj_sizes);
+
+        for (i=0; i<nof_nodes; ++i) free(out_adj_list[i]);
+        free(out_adj_list);
+        for (i=0; i<nof_nodes; ++i) free(in_adj_list[i]);
+        free(in_adj_list);
+        free(out_adj_attrs);
+    }
 
 
 //	void sort_edges(){

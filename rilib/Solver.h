@@ -182,6 +182,13 @@ public:
 				}
 			}
 		}
+        delete[] candidatesIT;
+        delete[] candidatesSize;
+        delete[] solution;
+        delete[] cmatched;
+        free(matched);
+        delete[] candidates;
+        delete[] listAllRef;
 	}
 
 

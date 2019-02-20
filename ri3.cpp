@@ -50,11 +50,37 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "SubGISolver.h"
 #include "InducedSubGISolver.h"
 
-#define PRINT_MATCHES
+//#define PRINT_MATCHES
 //#define CSV_FORMAT
+
+#include <map>
+#include <boost/graph/adjacency_list.hpp>
+#include <boost/graph/vf2_sub_graph_iso.hpp>
+
+struct comp_label { 
+    std::string label;
+ };
+using graph_type = boost::adjacency_list<boost::vecS, boost::vecS, boost::undirectedS, comp_label, comp_label>;
 
 
 using namespace rilib;
+
+void rigraph_to_boost(Graph& ri, graph_type& bst) {
+    std::map<int, graph_type::vertex_descriptor> vertices;
+    for (int i = 0; i < ri.nof_nodes; ++i) { 
+        vertices.emplace(i, boost::add_vertex(bst));
+        bst[vertices[i]].label = *(std::string*)ri.nodes_attrs[i];
+    }
+    for (int i = 0; i < ri.nof_nodes; ++i) {
+        for (int j = 0; j < ri.out_adj_sizes[i]; ++j) {
+            int k = ri.out_adj_list[i][j];
+            if (k > i) {
+                graph_type::edge_descriptor edge = boost::add_edge(vertices[i], vertices[k], bst).first;
+                bst[edge].label = *(std::string*)ri.out_adj_attrs[i][j];
+            }
+        }
+    }
+}
 
 
 void usage(char* args0);
@@ -138,6 +164,22 @@ void usage(char* args0){
 	std::cout<<"\tquery contains the query graph (just one)\n";
 };
 
+struct boost_callback {
+    static long match_count;
+    graph_type* graph_small;
+    graph_type* graph_large;
+    boost_callback(graph_type* gs, graph_type* gl) : graph_small(gs), graph_large(gl) { }
+    template <class CMap1to2, class CMap2to1>
+    bool operator()(CMap1to2, CMap2to1) { ++match_count; return true; }
+    bool operator()(graph_type::vertex_descriptor vs, graph_type::vertex_descriptor vl) {
+        return (*graph_small)[vs].label == (*graph_large)[vl].label;
+    }
+    bool operator()(graph_type::edge_descriptor vs, graph_type::edge_descriptor vl) {
+        return (*graph_small)[vs].label == (*graph_large)[vl].label;
+    }
+};
+
+long boost_callback::match_count = 0;
 
 int match(
 		MATCH_TYPE 			matchtype,
@@ -145,8 +187,8 @@ int match(
 		std::string& 		referencefile,
 		std::string& 	queryfile){
 
-	TIMEHANDLE load_s, load_s_q, make_mama_s, match_s, total_s;
-	double load_t=0;double load_t_q=0; double make_mama_t=0; double match_t=0; double total_t=0;
+	TIMEHANDLE load_s, load_s_q, make_mama_s, match_s, total_s, boost_s;
+	double load_t=0;double load_t_q=0; double make_mama_t=0; double match_t=0; double total_t=0; double boost_load_t=0; double boost_match_t=0; double boost_prep_t=0;
 	total_s=start_time();
 
 	bool takeNodeLabels = false;
@@ -191,6 +233,7 @@ int match(
 			nodeAttrDeco = new VoidAttrDeCo();
 			edgeAttrDeco = new VoidAttrDeCo();
 			break;
+        default: break;
 	}
 
 	TIMEHANDLE tt_start;
@@ -206,17 +249,14 @@ int match(
 	if(rret !=0){
 		std::cout<<"error on reading query graph\n";
 	}
-
-	make_mama_s=start_time();
-	MaMaConstrFirst* mama = new MaMaConstrFirst(*query);
-	mama->build(*query);
-	make_mama_t+=end_time(make_mama_s);
-
-	//mama->print();
-
+    boost_s=start_time();
+    graph_type *query_boost = new graph_type();
+    rigraph_to_boost(*query, *query_boost);
+    boost_load_t+=end_time(boost_s);
 	long 	steps = 0,				//total number of steps of the backtracking phase
 			triedcouples = 0, 		//nof tried pair (query node, reference node)
 			matchcount = 0, 		//nof found matches
+            boostmatchcount = 0,
 			matchedcouples = 0;		//nof mathed pair (during partial solutions)
 	long tsteps = 0, ttriedcouples = 0, tmatchedcouples = 0;
 
@@ -224,7 +264,7 @@ int match(
 	if(fd != NULL){
 #ifdef PRINT_MATCHES
 		//to print found matches on screen
-		MatchListener* matchListener=new ConsoleMatchListener();
+		MatchListener* matchListener=new EmptyMatchListener();// ConsoleMatchListener();
 #else
 		//do not print matches, just count them
 		MatchListener* matchListener=new EmptyMatchListener();
@@ -242,11 +282,20 @@ int match(
 			rreaded = (rret == 0);
 			load_t+=end_time(load_s);
 			if(rreaded){
+                    boost_s=start_time();
+                    graph_type *rrg_boost = new graph_type();
+                    rigraph_to_boost(*rrg, *rrg_boost);
+                    boost_load_t+=end_time(boost_s);
+
+	                make_mama_s=start_time();
+	                MaMaConstrFirst* mama = new MaMaConstrFirst(*rrg);
+	                mama->build(*rrg);
+	                make_mama_t+=end_time(make_mama_s);
 
 					//run the matching
 					match_s=start_time();
-					match(	*rrg,
-							*query,
+					match(	*query,
+							*rrg,
 							*mama,
 							*matchListener,
 							matchtype,
@@ -257,13 +306,23 @@ int match(
 							&tmatchedcouples);
 					match_t+=end_time(match_s);
 
+                    //run the boost matching
+                    boost_s=start_time();
+                    boost_callback cb(rrg_boost, query_boost);
+                    boost_prep_t+=end_time(boost_s);
+
+                    boost_s=start_time();
+                    boost::vf2_subgraph_iso(*rrg_boost, *query_boost, cb, boost::get(boost::vertex_index, *rrg_boost), boost::get(boost::vertex_index, *query_boost), boost::vertex_order_by_mult(*rrg_boost), cb, cb);
+                    boost_match_t+=end_time(boost_s);
+
 					//see rilib/Solver.h
 //					steps += tsteps;
 //					triedcouples += ttriedcouples;
 					matchedcouples += tmatchedcouples;
-
+                    delete rrg_boost;
+                    delete mama;
 				}
-//				delete rrg;
+				delete rrg;
 				//remember that destroyer are not defined
 			i++;
 		}while(rreaded);
@@ -285,19 +344,28 @@ int match(
 	std::cout<<referencefile<<"\t"<<queryfile<<"\t";
 	std:cout<<load_t_q<<"\t"<<make_mama_t<<"\t"<<load_t<<"\t"<<match_t<<"\t"<<total_t<<"\t"<<steps<<"\t"<<triedcouples<<"\t"<<matchedcouples<<"\t"<<matchcount;
 #else
-	std::cout<<"reference file: "<<referencefile<<"\n";
+	/*std::cout<<"reference file: "<<referencefile<<"\n";
 	std::cout<<"query file: "<<queryfile<<"\n";
 	std::cout<<"total time: "<<total_t<<"\n";
 	std::cout<<"matching time: "<<match_t<<"\n";
+    std::cout<<"boost matching time: "<<boost_match_t<<"\n";
 	std::cout<<"number of found matches: "<<matchcount<<"\n";
+    std::cout<<"boost found matches: "<<boost_callback::match_count<<"\n";
 	std::cout<<"search space size: "<<matchedcouples<<"\n";
+    std::cout<<"make mama time: "<<make_mama_t<<"\n";
+    std::cout<<"load time: "<<load_t_q + load_t<<"\n";
+    std::cout<<"boost load time: "<<boost_load_t<<"\n";
+    */
+    std::cout<<boost_match_t/match_t<<"\n";
 #endif
 
-//	delete mama;
-//	delete query;
+	delete query;
 
+    delete query_boost;
 	delete nodeComparator;
 	delete edgeComparator;
+    delete nodeAttrDeco;
+    delete edgeAttrDeco;
 
 	return 0;
 };

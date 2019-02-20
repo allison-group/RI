@@ -76,7 +76,7 @@ void match(
 	*steps = solver->steps;
 	*triedcouples = solver->triedcouples;
 	*matchedcouples = solver->matchedcouples;
-
+    delete solver;
 };
 
 }

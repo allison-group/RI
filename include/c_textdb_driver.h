@@ -97,6 +97,7 @@ int read_dbgraph(const char* filename, FILE* fd, Graph* g, enum GRAPH_FILE_TYPE 
 	case GFT_LAD:
 		ret = read_lad(filename, fd, g);
 		break;
+    default: break;
 	}
 
 	return ret;
@@ -129,6 +130,7 @@ int read_graph(const char* filename, Graph* g, enum GRAPH_FILE_TYPE type){
 	case GFT_LAD:
 		ret = read_lad(filename, fd, g);
 		break;
+    default: break;
 	}
 
 	fclose(fd);
@@ -583,12 +585,11 @@ int read_egfu(const char* fileName, FILE* fd, Graph* graph){
 			if(p!=NULL)
 			free(p);
 		}
-
-
-//			free(ns_o);
-//			free(ns_i);
 	}
-
+	free(ns_o);
+	free(ns_i);
+    delete ink;
+    delete[] label;
 	return 0;
 };
 

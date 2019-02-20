@@ -1,6 +1,6 @@
-INCLUDES= -I ./rilib/ -I ./include/
+INCLUDES= -I ./rilib/ -I ./include/ -I /usr/local/Cellar/boost/1.67.0_1/include/
 CC=g++
-CFLAGS=-c -O3
+CFLAGS=-c -O3 -std=c++11
 
 SOURCES= ri3.cpp
 OBJECTS=$(SOURCES:.cpp=.o)
