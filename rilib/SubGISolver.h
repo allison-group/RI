@@ -60,7 +60,7 @@ public:
 		return false;
 	}
 
-	virtual bool edgesCheck(int si, int ci, int* solution, bool* matched){
+	virtual bool edgesCheck(int si, int, int* solution, bool*){
 		int source, target;
 		int ii;
 		for(int me=0; me<mama.edges_sizes[si]; me++){

@@ -49,10 +49,10 @@ public:
 class DefaultAttrComparator: public AttributeComparator{
 public:
 	DefaultAttrComparator(){};
-	virtual bool compare(void* attr1, void* attr2){
+	virtual bool compare(void*, void*){
 		return true;
 	};
-	virtual int compareint(void* attr1, void* attr2){
+	virtual int compareint(void*, void*){
 		return 0;
 	};
 };

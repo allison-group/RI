@@ -76,10 +76,6 @@ public:
 		int ii;
 
 		int nof_sn 						        = mama.nof_sn;
-		void** nodes_attrs 				    = mama.nodes_attrs;				//indexed by state_id
-		int* edges_sizes 				      = mama.edges_sizes;				//indexed by state_id
-		MaMaEdge** edges 				      = mama.edges;					//indexed by state_id
-		int* map_node_to_state 			  = mama.map_node_to_state;			//indexed by node_id
 		int* map_state_to_node 			  = mama.map_state_to_node;			//indexed by state_id
 		int* parent_state 				    = mama.parent_state;			//indexed by state_id
 		MAMA_PARENTTYPE* parent_type 	= mama.parent_type;				//indexed by state id
@@ -97,7 +93,7 @@ public:
 		for(ii=0; ii<nof_sn; ii++){
 			solution[ii] = -1;
 		}
-		std:set<int>* cmatched = new std::set<int>[nof_sn];
+		std::set<int>* cmatched = new std::set<int>[nof_sn];
 
 		bool* matched = (bool*) calloc(rgraph.nof_nodes, sizeof(bool));		//indexed by node_id
 

@@ -50,7 +50,7 @@ class EmptyMatchListener : public MatchListener {
 public:
 	EmptyMatchListener() : MatchListener(){
 	}
-	virtual void match(int n, int* qIDs, int* rIDs){
+	virtual void match(int, int*, int*){
 		matchcount++;
 	};
 };
