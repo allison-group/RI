@@ -95,10 +95,10 @@ public:
 	}
 
 	virtual ~MatchingMachine(){
-		delete[] nodes_attrs;
 		for(int i=0; i<nof_sn; i++){
 			delete[] edges[i];
 		}
+    delete[] nodes_attrs;
 		delete[] edges;
 		free(edges_sizes);
 		free(o_edges_sizes);

@@ -46,7 +46,7 @@ using namespace rilib;
 
 enum MATCH_TYPE {MT_ISO, MT_INDSUB, MT_MONO};
 
-void match(
+inline void match(
 		Graph&			reference,
 		Graph& 			query,
 		MatchingMachine&		matchingMachine,

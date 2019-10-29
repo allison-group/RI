@@ -1,3 +1,4 @@
+#pragma once
 #include "AttributeComparator.h"
 #include "Graph.h"
 #include "MatchingMachine.h"
